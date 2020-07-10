@@ -1,5 +1,5 @@
 import os
-# import torch.utils.data as data
+import torch.utils.data as data
 import cv2
 import math
 import numpy as np
@@ -105,7 +105,7 @@ class TransformFunctionTest(object):
         w = round(image.shape[1] * scale / 32.0) * 32
 
         resized_image = cv2.resize(image, (int(w), int(h)))
-        resized_rgb_image = resized_image
+        resized_rgb_image = resized_image.copy()
         resized_image = resized_image / 256.0
         rgb_mean = np.array(RGB_MEAN, dtype=np.float32)
         rgb_std = np.array(RGB_STD, dtype=np.float32)

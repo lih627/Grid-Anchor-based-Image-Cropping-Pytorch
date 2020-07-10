@@ -1,11 +1,13 @@
 from croppingModel import build_crop_model
 from croppingDataset import setup_test_dataset, TransformFunctionTest
 import torch
+import torch.backends.cudnn as cudnn
+import torch.utils.data as data
 from torch.autograd import Variable
 import cv2
 import random
 import os
-
+import copy
 
 def generate_dataset(path):
     return setup_test_dataset(path)
@@ -29,6 +31,7 @@ class AutoCrop(object):
         self.net.eval()
         self.cuda = cuda
         if self.cuda:
+            self.net = torch.nn.DataParallel(self.net)
             self.net.cuda()
 
     def autoCropPlain(self,
@@ -47,7 +50,7 @@ class AutoCrop(object):
         transform_func = TransformFunctionTest()
 
         (resized_rgb_img, transformed_bbox, source_bboxes,
-         raw_resized_rgb_img, trans_bboxes) = transform_func(rgb_img, img_path)
+         raw_resized_rgb_img, trans_bboxes) = transform_func(rgb_img, image_size)
 
         # sample = {'imgpath': img_path, 'image': rgb_img, 'resized_image': resized_rgb_img,
         #           'tbboxes': transformed_bbox, 'sourceboxes': source_bboxes}
@@ -60,7 +63,11 @@ class AutoCrop(object):
         if self.cuda:
             resized_rgb_img_torch = Variable(resized_rgb_img_torch.cuda())
             roi = Variable(torch.Tensor(roi))
+        else:
+            resized_rgb_img_torch = Variable(resized_rgb_img_torch)
+            roi = Variable(torch.Tensor(roi))
         out = self.net(resized_rgb_img_torch, roi)
+        out = out
         id_out = sorted(range(len(out)), key=lambda k: out[k], reverse=True)
         selected_ids = id_out[:topK]
         top_crops = []
@@ -68,44 +75,45 @@ class AutoCrop(object):
         for id_ in selected_ids:
             cbbox = source_bboxes[id_]
             top_bboxs.append(cbbox)
-            top_crops.append(rgb_img[int(cbbox[0]): int(cbbox[2]), int(cbbox[1]): int(cbbox[3])])
+            top_crops.append(rgb_img[int(cbbox[0]): int(cbbox[2]), int(cbbox[1]): int(cbbox[3]), :])
 
         if show_ret:
             cv2.imshow('original image', bgr_img)
             for nth, c_crop in enumerate(top_crops):
-                cv2.imshow('Top{} Crop'.format(nth + 1), c_crop[::, (2, 1, 0)])
+                cv2.imshow('Top{} Crop'.format(nth + 1), c_crop[:, :, (2, 1, 0)])
 
         if debug:
             # raw_resized_bgr_img = cv2.UMat(raw_resized_rgb_img[:, :, (2, 1, 0)])
-            bgr_img_with_anchor = bgr_img
+            bgr_img_with_anchor = bgr_img.copy()
             for idx, bbox_source in enumerate(source_bboxes):
                 font = cv2.FONT_HERSHEY_TRIPLEX
                 dx1, dx2, dy1, dy2 = int((random.random() - 1) * 4), int((random.random() - 1) * 4), \
                                      int((random.random() - 1) * 4), int((random.random() - 1) * 4)
                 r, g, b = int(random.random() * 255), int(random.random() * 255), int(random.random() * 255)
                 cv2.rectangle(bgr_img_with_anchor,
-                              tuple(bbox_source[1] + dx1, bbox_source[0] + dy1),
-                              tuple(bbox_source[3] + dx2, bbox_source[2] + dy2),
+                              tuple([bbox_source[1] + dx1, bbox_source[0] + dy1]),
+                              tuple([bbox_source[3] + dx2, bbox_source[2] + dy2]),
                               (b, g, r))
                 cv2.putText(bgr_img_with_anchor, str(idx + 1),
-                            tuple(bbox_source[1] + dx1, bbox_source[0] + dy1),
-                            0, 5, font, (0, 0, 0))
+                            tuple([bbox_source[1] + dx1, bbox_source[0] + dy1]),
+                            font, 0.5, (0, 0, 0))
             cv2.imshow('original img with anchor-num anchor:{}'.format(len(source_bboxes)),
                        bgr_img_with_anchor)
-            bgr_img_with_top_k = bgr_img
+            bgr_img_with_top_k = bgr_img.copy()
+            print(bgr_img_with_anchor is bgr_img_with_top_k)
             for idx, tbox in enumerate(top_bboxs):
                 font = cv2.FONT_HERSHEY_TRIPLEX
                 dx1, dx2, dy1, dy2 = int((random.random() - 1) * 4), int((random.random() - 1) * 4), \
                                      int((random.random() - 1) * 4), int((random.random() - 1) * 4)
                 r, g, b = int(random.random() * 255), int(random.random() * 255), int(random.random() * 255)
                 cv2.rectangle(bgr_img_with_top_k,
-                              tuple(tbox[1] + dx1, tbox[0] + dy1),
-                              tuple(tbox[3] + dx2, tbox[2] + dy2),
+                              tuple([tbox[1] + dx1, tbox[0] + dy1]),
+                              tuple([tbox[3] + dx2, tbox[2] + dy2]),
                               (b, g, r))
                 cv2.putText(bgr_img_with_top_k, 'TOP{}'.format(idx + 1),
-                            tuple(tbox[1] + dx1, tbox[0] + dy1),
-                            0, 5, font, (0, 0, 0))
-            cv2.imshow('Original detection reslut', bgr_img_with_top_k)
+                            tuple([tbox[1] + dx1, tbox[0] + dy1]),
+                            font, 0.5, (0, 0, 0))
+            cv2.imshow('Original detection TOP{}'.format(len(top_bboxs)), bgr_img_with_top_k)
 
         if debug or show_ret:
             cv2.waitKey()
@@ -134,4 +142,9 @@ class AutoCrop(object):
 
 if __name__=='__main__':
     autoCrop = AutoCrop()
-    pass
+    autoCrop.autoCropPlain(img_path='./dataset/test_1.jpg',
+                           topK=3,
+                           show_ret=True,
+                           save_ret=True,
+                           save_dir='./result',
+                           debug=True)
