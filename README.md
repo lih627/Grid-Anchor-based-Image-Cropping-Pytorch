@@ -1,9 +1,12 @@
-# Grid-Anchor-based-Image-Cropping-Pytorch
-This repository includes several extensions we have made to our conference version. Please read the [paper](https://drive.google.com/open?id=1Bd1VaqYVycB7Npv5OdXKl-znKs_APl4n) for details.
+# Image Automatic Crop based on GAIC
 
-Some codes, including roi align and rod align, are written as PyTorch extensions in C++ with or without CUDA. We notice that PyTorch API changes a lot after v1.0 so that our official implementation is NOT fully compatible with PyTorch 1.0 or later version. In this repository, we upgrade the interface to make our code smooth again. 
+> This repository forked from [Grid-Anchor-based-Image_Cropping-Pytorch](https://github.com/lld533/Grid-Anchor-based-Image-Cropping-Pytorch)
 
-Now, we offer prebuilt bundles compatible with PyTorch 1.2 for both Python2.7 and Python3.5 users.
+I have modified the anchor boxes generator method and streamlined the code  to satisfy my personal application needs.
+
+
+
+
 
 ### Official PyTorch implementation
 1. [PyTorch 0.4.1 + Python 2.7](https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping-Pytorch)
@@ -49,9 +52,9 @@ We release binary executable annotation software at /root/to/Grid-Anchor-based-I
 
 3. The software makes a "scores" directory and scores of the cropped images are saved with their corresponding image name in $root/annotation/scores.
 		
+
 Please note that a negative value, i.e. -1 in a score file means there is no need to mark the cropped image. The scores of cropped images are arranged in the text file according to how they are generated. For details, please check the function called ComputeCategories() in $root/annotation/ref_code/MainWindowViewModel.cs.
 
 4. You can close the software at any time. A text file called "progress.txt" is automatically created at $root/annotation. Once you launch the software again, the scores will be reloaded.
 
-### Other notes
-1. This repository is developed to be compatible with PyTorch 1.0+. Please refer to the [official implementation](https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping-Pytorch) for any performance comparison.
+1. 

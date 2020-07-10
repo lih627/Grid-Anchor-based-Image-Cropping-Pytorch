@@ -10,10 +10,13 @@ import argparse
 import time
 
 import torch.multiprocessing
+
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
+
 
 parser = argparse.ArgumentParser(
     description='Grid anchor based image cropping With Pytorch')
@@ -27,7 +30,8 @@ parser.add_argument('--num_workers', default=0, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
-parser.add_argument('--net_path', default='pretrained_model/mobilenet_0.625_0.583_0.553_0.525_0.785_0.762_0.748_0.723_0.783_0.806.pth',
+parser.add_argument('--net_path',
+                    default='pretrained_model/mobilenet_0.625_0.583_0.553_0.525_0.785_0.762_0.748_0.723_0.783_0.806.pth',
                     help='Directory for saving checkpoint models')
 args = parser.parse_args()
 
@@ -44,27 +48,30 @@ if torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-dataset = setup_test_dataset(dataset_dir = args.input_dir)
+dataset = setup_test_dataset(dataset_dir=args.input_dir)
+
 
 def naive_collate(batch):
     return batch[0]
+
 
 def output_file_name(input_path, idx):
     name = os.path.basename(input_path)
     segs = name.split('.')
     assert len(segs) >= 2
-    return '%scrop_%d.%s'%('.'.join(segs[:-1]), idx, segs[-1])
+    return '%scrop_%d.%s' % ('.'.join(segs[:-1]), idx, segs[-1])
+
 
 def test():
-    for epoch in range(0,1):
+    for epoch in range(0, 1):
 
-        net = build_crop_model(scale='multi',#scale='single', 
-                               alignsize=9, reddim=8, loadweight=False, model='mobilenetv2',downsample=4)
+        net = build_crop_model(scale='multi',  # scale='single',
+                               alignsize=9, reddim=8, loadweight=False, model='mobilenetv2', downsample=4)
         net.load_state_dict(torch.load(args.net_path))
         net.eval()
 
         if args.cuda:
-            net = torch.nn.DataParallel(net,device_ids=[0])
+            net = torch.nn.DataParallel(net, device_ids=[0])
             cudnn.benchmark = True
             net = net.cuda()
 
@@ -80,13 +87,13 @@ def test():
             resized_image = sample['resized_image']
             tbboxes = sample['tbboxes']
 
-            if len(tbboxes['xmin'])==0:
+            if len(tbboxes['xmin']) == 0:
                 continue
 
             roi = []
 
-            for idx in range(0,len(tbboxes['xmin'])):
-                roi.append((0, tbboxes['xmin'][idx],tbboxes['ymin'][idx],tbboxes['xmax'][idx],tbboxes['ymax'][idx]))           
+            for idx in range(0, len(tbboxes['xmin'])):
+                roi.append((0, tbboxes['xmin'][idx], tbboxes['ymin'][idx], tbboxes['xmax'][idx], tbboxes['ymax'][idx]))
 
             resized_image = torch.unsqueeze(torch.as_tensor(resized_image), 0)
             if args.cuda:
@@ -97,18 +104,18 @@ def test():
                 roi = Variable(torch.Tensor(roi))
 
             t0 = time.time()
-            out = net(resized_image,roi)
+            out = net(resized_image, roi)
             t1 = time.time()
             print('timer: %.4f sec.' % (t1 - t0))
-            id_out = sorted(range(len(out)), key=lambda k: out[k], reverse = True)
+            id_out = sorted(range(len(out)), key=lambda k: out[k], reverse=True)
 
-            for id in range(0,1):
+            for id in range(0, 1):
                 top_box = bboxes[id_out[id]]
-                top_crop = image[int(top_box[0]):int(top_box[2]),int(top_box[1]):int(top_box[3])]
+                top_crop = image[int(top_box[0]):int(top_box[2]), int(top_box[1]):int(top_box[3])]
                 imgname = imgpath[0].split('/')[-1]
-                cv2.imwrite(os.path.join(args.output_dir, 
-                                         output_file_name(imgpath, id+1)),
-                            top_crop[:,:,(2, 1, 0)])
+                cv2.imwrite(os.path.join(args.output_dir,
+                                         output_file_name(imgpath, id + 1)),
+                            top_crop[:, :, (2, 1, 0)])
 
 
 if __name__ == '__main__':
