@@ -137,6 +137,7 @@ class TransformFunctionTest(object):
                                 [bbox[1], bbox[0], bbox[3], bbox[2]]])
 
         resized_image = resized_image.transpose((2, 0, 1))
+        # trans_bboxs xmin ymin xmax ymax
         return (resized_image, transformed_bbox, source_bboxes,
                 resized_rgb_image, trans_bboxs)
 

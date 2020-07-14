@@ -115,7 +115,7 @@ class AutoCrop(object):
             cv2.imshow('original img with anchor-num anchor:{}'.format(len(source_bboxes)),
                        bgr_img_with_anchor)
             bgr_img_with_top_k = bgr_img.copy()
-            print(bgr_img_with_anchor is bgr_img_with_top_k)
+            assert bgr_img_with_anchor is not bgr_img_with_top_k, 'DEBUG show ret'
             for idx, tbox in enumerate(top_bboxs):
                 font = cv2.FONT_HERSHEY_TRIPLEX
                 dx1, dx2, dy1, dy2 = int((random.random() - 1) * 4), int((random.random() - 1) * 4), \
@@ -170,6 +170,7 @@ class AutoCrop(object):
                  debug=False):
 
         assert img_path is not None, 'Please input image path'
+        assert os.path.exists(img_path), 'Can not find {}'.format(img_path)
         if not isinstance(image_size, float):
             image_size = float(image_size)
         bgr_img = cv2.imread(img_path)
@@ -190,8 +191,10 @@ class AutoCrop(object):
         top_crops = []
         top_bboxs = []
         for id_ in selected_ids:
+            # cbbox ymin ximn ymax xmax
             cbbox = source_bboxes[id_]
             top_bboxs.append(cbbox)
+            # H W C ymin:ymax xmin: xmax
             top_crops.append(rgb_img[int(cbbox[0]): int(cbbox[2]), int(cbbox[1]): int(cbbox[3]), :])
 
         if show_ret:
@@ -200,7 +203,6 @@ class AutoCrop(object):
                 cv2.imshow('Top{} Crop'.format(nth + 1), c_crop[:, :, (2, 1, 0)])
 
         if debug:
-            # raw_resized_bgr_img = cv2.UMat(raw_resized_rgb_img[:, :, (2, 1, 0)])
             bgr_img_with_anchor = bgr_img.copy()
             for idx, bbox_source in enumerate(source_bboxes):
                 font = cv2.FONT_HERSHEY_TRIPLEX
@@ -208,6 +210,11 @@ class AutoCrop(object):
                                      int((random.random() - 1) * 4), int((random.random() - 1) * 4)
                 r, g, b = int(random.random() * 255), int(random.random() * 255), int(random.random() * 255)
                 cv2.rectangle(bgr_img_with_anchor,
+                              # xmin ymin xmax ymax
+                              #    xmin, ymin
+                              #   |
+                              #   |
+                              #   |___________xmax, ymax
                               tuple([bbox_source[1] + dx1, bbox_source[0] + dy1]),
                               tuple([bbox_source[3] + dx2, bbox_source[2] + dy2]),
                               (b, g, r))
@@ -217,7 +224,7 @@ class AutoCrop(object):
             cv2.imshow('original img with anchor-num anchor:{}'.format(len(source_bboxes)),
                        bgr_img_with_anchor)
             bgr_img_with_top_k = bgr_img.copy()
-            print(bgr_img_with_anchor is bgr_img_with_top_k)
+            # print(bgr_img_with_anchor is bgr_img_with_top_k)
             for idx, tbox in enumerate(top_bboxs):
                 font = cv2.FONT_HERSHEY_TRIPLEX
                 dx1, dx2, dy1, dy2 = int((random.random() - 1) * 4), int((random.random() - 1) * 4), \
@@ -243,7 +250,9 @@ class AutoCrop(object):
                 os.mkdir(save_dir)
             for idx, corp_ret in enumerate(top_crops):
                 save_path = os.path.join(save_dir,
-                                         '.'.join(segs[:-1] + '_{}'.format(idx + 1) + '.' + segs[-1]))
+                                         '.'.join(segs[:-1]) +
+                                         '_{}'.format(idx + 1) +
+                                         '.' + segs[-1])
 
                 cv2.imwrite(save_path, corp_ret[:, :, (2, 1, 0)])
 
@@ -256,9 +265,11 @@ class AutoCrop(object):
 
 if __name__ == '__main__':
     autoCrop = AutoCrop()
-    autoCrop.autoCropPlain(img_path='./dataset/test_1.jpg',
-                           topK=3,
-                           show_ret=True,
-                           save_ret=True,
-                           save_dir='./result',
-                           debug=True)
+    autoCrop.autoCrop(img_path='./dataset/test_4.jpg',
+                      topK=3,
+                      crop_height=10,
+                      crop_width=16,
+                      show_ret=True,
+                      save_ret=True,
+                      save_dir='./result',
+                      debug=True)
