@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+from collections import defaultdict
 
 def resize_image_op(raw_img, img_size=256.0):
     """
@@ -17,7 +17,7 @@ def resize_image_op(raw_img, img_size=256.0):
 
     resized_img = cv2.resize(raw_img, (int(w), int(h)))
     scale_height = raw_img.shape[0] / float(resized_img.shape[0])
-    scale_width = raw_img.shape[1] / float(resized_img.shape[0])
+    scale_width = raw_img.shape[1] / float(resized_img.shape[1])
     return resized_img, scale_height, scale_width
 
 
@@ -82,11 +82,11 @@ def _generate_by_bins(image, n_bins=12):
 
 def _generate_by_steps(image, height_step, width_step):
     h, w = image.shape[:2]
-    h_bins = h // height_step
-    w_bins = w // width_step
-    annotations = []
-    for h_bin_end in range(h_bins // 3, h_bins + 1):
-        for w_bin_end in range(w_bins // 3, w_bins + 1):
+    h_bins = round(h // height_step)
+    w_bins = round(w // width_step)
+    annotations = defaultdict(list)
+    for h_bin_end in range(h_bins // 3, h_bins + 2):
+        for w_bin_end in range(w_bins // 3, w_bins + 2):
             h_end = h_bin_end * height_step
             w_end = w_bin_end * width_step
             if h_end < h and w_end < w:
@@ -95,9 +95,20 @@ def _generate_by_steps(image, height_step, width_step):
                     w_len = length * width_step
                     h_start = h_end - h_len
                     w_start = w_end - w_len
-                    if w_len * h_len > 0.2 * w * h:
-                        annotations.append([h_start, w_start, h_end, w_end])
-    return annotations
+                    if w_len * h_len > 0.4 * w * h:
+                        annotations[0].append([h_start, w_start, h_end, w_end])
+                    elif w_len * h_len > 0.3 * w * h:
+                        annotations[1].append([h_start, w_start, h_end, w_end])
+                    elif w_len * h_len > 0.2 * w * h:
+                        annotations[2].append([h_start, w_start, h_end, w_end])
+                    elif w_len * h_len > 0.1 * w * h:
+                        annotations[3].append([h_start, w_start, h_end, w_end])
+    ret = []
+    for k in [0, 1, 2, 3]:
+        if annotations[k]:
+            ret.extend(annotations[k])
+            break
+    return ret
 
 
 def generate_bboxs(resized_image,
@@ -130,14 +141,16 @@ def generate_bboxs(resized_image,
             w_step = min_step
             h_step = round(crop_height * min_step) / float(crop_width)
         bboxs = _generate_by_steps(resized_image, height_step=h_step, width_step=w_step)
+    # bboxs ymin xim ymax xmax
     source_bboxs = []
     trans_bboxs = []
     for bbox in bboxs:
-        # h1, w1, h2: w2 [y1 x1 y2 x2]  [1, 0, 3, 2]
+        # trans_bbox xmin ymin xmax ymax
         trans_bboxs.append([round(item) for item in [bbox[1], bbox[0],
                                                      bbox[3], bbox[2]]])
-        source_bboxs.append([round(item) for item in [bbox[1] * scale_height,
-                                                      bbox[0] * scale_width,
-                                                      bbox[3] * scale_height,
-                                                      bbox[2] * scale_width]])
+        # source ymin xmin ymax xmax
+        source_bboxs.append([round(item) for item in [bbox[0] * scale_height,
+                                                      bbox[1] * scale_width,
+                                                      bbox[2] * scale_height,
+                                                      bbox[3] * scale_width]])
     return trans_bboxs, source_bboxs
