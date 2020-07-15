@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from collections import defaultdict
 
+
 def resize_image_op(raw_img, img_size=256.0):
     """
     :param raw_img: [H, W, 3]
@@ -44,7 +45,8 @@ def transpose_image_op(image):
     :return:
         [3, H,  W]
     """
-    image = image.transpose((2, 0, 1))
+    if image.shape[2] == 3:
+        image = image.transpose((2, 0, 1))
     return image
 
 
@@ -111,15 +113,53 @@ def _generate_by_steps(image, height_step, width_step):
     return ret
 
 
-def generate_bboxs(resized_image,
-                   scale_height,
-                   scale_width,
-                   crop_height=None,
-                   crop_width=None,
-                   min_step=8,
-                   n_bins=14):
+def enlarge_bbox(bbox, factor=1.2):
     """
-    generate tansformed_bbox and source_bbox
+    Enlarge the bounding boxes
+    :param bbox: [N * C] array
+    :return:
+        [N * 4] xmin ymin xmax ymax
+    """
+    xmin, ymin, xmax, ymax = bbox[:4]
+    cx = (xmin + xmax) / 2.0
+    cy = (ymin + ymax) / 2.0
+    w_ = (xmax - xmin) * factor / 2.0
+    h_ = (ymax - ymin) * factor / 2.0
+    return [cx - w_, cy - h_, cx + w_, cy + h_]
+
+
+def is_bbox_intersect(bbox1, bbox2):
+    """
+    False: bbox1 all in bbox2 or bbox2 in bbox1 or IoU(bbox1, bbox2) = 0
+    :return:
+        bool
+    """
+    x1_min, y1_min, x1_max, y1_max = bbox1[:4]
+    x2_min, y2_min, x2_max, y2_max = bbox2[:4]
+    if x1_min >= x2_min and y1_min >= y2_min and x1_max <= x2_max and y1_max <=y2_max:
+        return False
+    if x2_min >= x1_min and y2_min >= y1_min and x2_max <= x1_max and y2_max <= y1_max:
+        return False
+    if x1_max <= x2_min or x2_max <= x1_min or y1_max <= y2_min or y2_max <= y1_min:
+        return False
+    return True
+
+def generate_bboxes(resized_image,
+                    scale_height,
+                    scale_width,
+                    crop_height=None,
+                    crop_width=None,
+                    min_step=8,
+                    n_bins=14,
+                    face_bboxes=None):
+    """
+    generate transformed_bbox and source_bbox.
+    Use transformed_bboxes as rois for post-processing.
+    note:
+        The coordinate definition order of the trans_bboxes
+         and source_bboxes
+         is different
+
     :param resized_image:
     :param scale_height:
     :param scale_width:
@@ -127,8 +167,8 @@ def generate_bboxs(resized_image,
     :param crop_width:
     :param min_step: the minimum step_size: defalut 8
     :return:
-        trans_bboxs  [Nx4] [y1 x1 y2 x2]
-        source_bboxs [Nx4] [y1 x1 y2 x2]
+        trans_bboxs  [Nx4] [xmin ymin xmax ymax]
+        source_bboxs [Nx4] [ymin xmin ymax xmax]
     """
     if crop_height is None or crop_width is None:
         bboxs = _generate_by_bins(resized_image, n_bins=n_bins)
@@ -153,4 +193,33 @@ def generate_bboxs(resized_image,
                                                       bbox[1] * scale_width,
                                                       bbox[2] * scale_height,
                                                       bbox[3] * scale_width]])
+
+    if face_bboxes is not None:
+        if len(face_bboxes) > 0:
+            area = []
+            for item in face_bboxes:
+                area.append((item[2] - item[0]) * (item[3] - item[1]))
+            max_area = max(area)
+            filter_face_bboxes = []
+            for idx, face_bbox in enumerate(face_bboxes):
+                if area[idx] / max_area > 0.4:
+                    filter_face_bboxes.append(face_bbox)
+            t_bboxs = []
+            s_bboxs = []
+            for idx, tbbox in enumerate(trans_bboxs):
+                is_valied = True
+                for fbbox in filter_face_bboxes:
+                    if is_bbox_intersect(tbbox, fbbox):
+                        is_valied = False
+                        break
+                if is_valied:
+                    t_bboxs.append(tbbox)
+                    s_bboxs.append(source_bboxs[idx])
+            if len(t_bboxs) > 0:
+                return t_bboxs, s_bboxs
+
     return trans_bboxs, source_bboxs
+
+
+if __name__ == '__main__':
+    pass
