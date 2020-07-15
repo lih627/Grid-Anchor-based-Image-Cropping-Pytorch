@@ -128,20 +128,22 @@ def enlarge_bbox(bbox, factor=1.2):
     return [cx - w_, cy - h_, cx + w_, cy + h_]
 
 
-def is_bbox_intersect(bbox1, bbox2):
+def bbox_intersect_val(bbox1, bbox2):
     """
-    False: bbox1 all in bbox2 or bbox2 in bbox1 or IoU(bbox1, bbox2) = 0
+    1: bbox1 all in bbox2 or bbox2 in bbox1
+    2: IoU(bbox1, bbox2) = 0
+    0: interset
     :return:
         bool
     """
     x1_min, y1_min, x1_max, y1_max = bbox1[:4]
     x2_min, y2_min, x2_max, y2_max = bbox2[:4]
     if x1_min >= x2_min and y1_min >= y2_min and x1_max <= x2_max and y1_max <=y2_max:
-        return False
+        return 1
     if x2_min >= x1_min and y2_min >= y1_min and x2_max <= x1_max and y2_max <= y1_max:
-        return False
+        return 1
     if x1_max <= x2_min or x2_max <= x1_min or y1_max <= y2_min or y2_max <= y1_min:
-        return False
+        return 2
     return True
 
 def generate_bboxes(resized_image,
@@ -208,11 +210,15 @@ def generate_bboxes(resized_image,
             s_bboxs = []
             for idx, tbbox in enumerate(trans_bboxs):
                 is_valied = True
+                can_used = False
                 for fbbox in filter_face_bboxes:
-                    if is_bbox_intersect(tbbox, fbbox):
+                    i_val = bbox_intersect_val(tbbox, fbbox)
+                    if i_val == 0:
                         is_valied = False
                         break
-                if is_valied:
+                    elif i_val == 1:
+                        can_used = True
+                if is_valied and can_used:
                     t_bboxs.append(tbbox)
                     s_bboxs.append(source_bboxs[idx])
             if len(t_bboxs) > 0:

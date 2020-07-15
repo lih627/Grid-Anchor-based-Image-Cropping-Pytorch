@@ -260,28 +260,28 @@ class AutoCrop(object):
 
 if __name__ == '__main__':
     autoCrop = AutoCrop()
-    # for w, h in [(210, 294),
-    #              (342, 478),
-    #              (525, 295),
-    #              (716, 229),
-    #              (1125, 1125)]:
-    #     save_dir = './dataset/ret/{}_{}'.format(w, h)
-    #     for item in os.listdir('./dataset/eval'):
-    #         img_path = './dataset/eval/' + item
-    #         autoCrop.autoCrop(img_path=img_path,
-    #                           topK=3,
-    #                           crop_width=w,
-    #                           crop_height=h,
-    #                           show_ret=False,
-    #                           save_ret=True,
-    #                           save_dir=save_dir,
-    #                           debug=False)
+    for w, h in [(210, 294),
+                 (342, 478),
+                 (525, 295),
+                 (716, 229),
+                 (1125, 1125)]:
+        save_dir = './dataset/ret/multi_{}_{}'.format(w, h)
+        for item in os.listdir('./dataset/multi-person'):
+            img_path = './dataset/multi-person/' + item
+            autoCrop.autoCrop(img_path=img_path,
+                              topK=3,
+                              crop_width=w,
+                              crop_height=h,
+                              show_ret=False,
+                              save_ret=True,
+                              save_dir=save_dir,
+                              debug=False)
 
-    autoCrop.autoCrop(img_path='./dataset/test_me.jpg',
-                      topK=3,
-                      crop_height=9,
-                      crop_width=16,
-                      show_ret=True,
-                      save_ret=True,
-                      save_dir='./result',
-                      debug=True)
+    # autoCrop.autoCrop(img_path='./dataset/test_5.jpg',
+    #                   topK=1,
+    #                   crop_height=9,
+    #                   crop_width=16,
+    #                   show_ret=True,
+    #                   save_ret=True,
+    #                   save_dir='./result',
+    #                   debug=True)
