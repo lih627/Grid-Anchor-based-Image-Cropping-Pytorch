@@ -37,8 +37,8 @@ class AutoCrop(object):
         self.face_detector = None
         if add_face_detector:
             self.face_detector = face_detection.build_detector("DSFDDetector",
-                                                                confidence_threshold=.5,
-                                                                nms_iou_threshold=.3)
+                                                                confidence_threshold=0.5,
+                                                                nms_iou_threshold=0.3)
         if self.cuda:
             self.net = torch.nn.DataParallel(self.net)
             self.net.cuda()
@@ -130,7 +130,7 @@ class AutoCrop(object):
         assert resized_rgb_img is not resized_rgb_img_norm, 'DEBUG'
         face_bboxes = None
         if self.face_detector is not None:
-            face_bboxes = self.face_detector(resized_rgb_img)
+            face_bboxes = self.face_detector.detect(resized_rgb_img)
             face_bboxes = [enlarge_bbox(bbox) for bbox in face_bboxes]
 
 
@@ -260,28 +260,28 @@ class AutoCrop(object):
 
 if __name__ == '__main__':
     autoCrop = AutoCrop()
-    for w, h in [(210, 294),
-                 (342, 478),
-                 (525, 295),
-                 (716, 229),
-                 (1125, 1125)]:
-        save_dir = './dataset/ret/{}_{}'.format(w, h)
-        for item in os.listdir('./dataset/eval'):
-            img_path = './dataset/eval/' + item
-            autoCrop.autoCrop(img_path=img_path,
-                              topK=3,
-                              crop_width=w,
-                              crop_height=h,
-                              show_ret=False,
-                              save_ret=True,
-                              save_dir=save_dir,
-                              debug=False)
+    # for w, h in [(210, 294),
+    #              (342, 478),
+    #              (525, 295),
+    #              (716, 229),
+    #              (1125, 1125)]:
+    #     save_dir = './dataset/ret/{}_{}'.format(w, h)
+    #     for item in os.listdir('./dataset/eval'):
+    #         img_path = './dataset/eval/' + item
+    #         autoCrop.autoCrop(img_path=img_path,
+    #                           topK=3,
+    #                           crop_width=w,
+    #                           crop_height=h,
+    #                           show_ret=False,
+    #                           save_ret=True,
+    #                           save_dir=save_dir,
+    #                           debug=False)
 
-    # autoCrop.autoCrop(img_path='./dataset/test_4.jpg',
-    #                   topK=3,
-    #                   crop_height=10,
-    #                   crop_width=16,
-    #                   show_ret=True,
-    #                   save_ret=True,
-    #                   save_dir='./result',
-    #                   debug=True)
+    autoCrop.autoCrop(img_path='./dataset/test_me.jpg',
+                      topK=3,
+                      crop_height=9,
+                      crop_width=16,
+                      show_ret=True,
+                      save_ret=True,
+                      save_dir='./result',
+                      debug=True)
