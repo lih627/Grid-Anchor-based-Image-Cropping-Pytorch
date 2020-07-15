@@ -6,6 +6,11 @@ I have modified the anchor boxes generator method and streamlined the code  to s
 
 
 
+### Usage
+
+```shell
+nvcc -c -o rod_align_kernel.cu.o -I /home/x/anaconda3/envs/imgcrop/lib/python3.7/site-packages/torch/include/ rod_align_kernel.cu -x cu -Xcompiler -fPIC -arch=sm_53
+```
 
 
 ### Official PyTorch implementation
@@ -13,7 +18,9 @@ I have modified the anchor boxes generator method and streamlined the code  to s
 2. [Matlab (conference version)](https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping)
 
 ### Requirements
-PyTorch 1.0 or later, numpy, cv2, scipy. 
+- PyTorch 1.2
+- torchvision 0.4
+- opencv-python  
 
 ### Usage
 1. Download the source code, the [dataset](https://drive.google.com/open?id=1X9xK5O9cx4_MvDkWAs5wVuM-mPWINaqa) and the [pretrained model](https://drive.google.com/open?id=1kaNWvfIdtbh2GIPNSWXdxqyS-d2DR1F3).
